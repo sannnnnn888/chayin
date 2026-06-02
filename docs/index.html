@@ -77,9 +77,9 @@
             0%, 100% { transform: rotate(-5deg) translateY(0); }
             50% { transform: rotate(5deg) translateY(-4px); }
         }
-        .header-inner .company-name {
-            font-size: 14px; font-weight: 700; color: #4A2A10; letter-spacing: 2px;
-            position: relative; z-index: 1; margin-bottom: 8px;
+        .company-name {
+            font-size: 20px; font-weight: 800; color: #4A2A10; letter-spacing: 4px;
+            text-align: center; margin-bottom: 14px; position: relative; z-index: 1;
         }
         .header-inner h1 { font-size: 24px; font-weight: 800; color: #5A2E0E; letter-spacing: 3px; position: relative; z-index: 1; }
         .header-inner h1 .em { color: #C26A2A; }
@@ -428,6 +428,7 @@
         /* Responsive */
         @media (max-width: 600px) {
             .container { padding: 12px 12px 30px; }
+            .company-name { font-size: 16px; letter-spacing: 2px; }
             .header-inner { padding: 22px 16px 18px; }
             .header-inner h1 { font-size: 20px; }
             .section-card { padding: 18px 14px; border-radius: 18px; }
@@ -475,23 +476,16 @@
     <!-- Main -->
     <div class="container">
 
+        <!-- Company Name -->
+        <div class="company-name">广意医疗养生科技有限公司</div>
+
         <!-- Header -->
         <div class="header-wrap">
             <div class="header-inner">
                 <div class="deco-icons">
                     <span>🍊</span><span>🌹</span><span>🍋</span><span>🌿</span>
                 </div>
-                <div class="company-name">广意医疗养生科技有限公司</div>
                 <h1>养生茶饮<span class="em">品鉴卡</span></h1>
-                <p>请先试喝，再扫码填写 · 只评你喝过的那几款</p>
-                <div class="ingredient-strip">
-                    <span class="pill">🍊 陈皮</span>
-                    <span class="pill">🌹 玫瑰花</span>
-                    <span class="pill">🫐 枸杞</span>
-                    <span class="pill">🍋 柠檬</span>
-                    <span class="pill">🌸 菊花</span>
-                    <span class="pill">🌿 薄荷</span>
-                </div>
             </div>
         </div>
 
