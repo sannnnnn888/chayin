@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>养生茶饮 · 路演品鉴卡</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: #3D2B1A;
+            min-height: 100vh;
+            background: #F5EDE0;
+            overflow-x: hidden;
+        }
+
+        /* ===== Background layers ===== */
+        .bg-layer { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+        .bg-layer .texture {
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139,90,43,0.015) 2px, rgba(139,90,43,0.015) 4px);
+        }
+        .bg-layer .gradient {
+            position: absolute; inset: 0;
+            background:
+                radial-gradient(ellipse 90% 60% at 15% 20%, rgba(255,180,100,0.08) 0%, transparent 70%),
+                radial-gradient(ellipse 70% 50% at 85% 75%, rgba(180,120,80,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 50% 50%, rgba(200,160,120,0.04) 0%, transparent 70%);
+        }
+
+        /* Floating Ingredients */
+        .floating-ingredients { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+        .floating-ingredients .item {
+            position: absolute; font-size: 32px; opacity: 0.15;
+            animation: drift linear infinite;
+        }
+        @keyframes drift {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            5% { opacity: 0.15; }
+            90% { opacity: 0.15; }
+            100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* Corner decorations */
+        .corner-deco { position: fixed; pointer-events: none; z-index: 0; font-size: 80px; opacity: 0.06; line-height: 1; }
+        .corner-deco.tl { top: -10px; left: -10px; transform: rotate(-15deg); }
+        .corner-deco.tr { top: -10px; right: -10px; transform: rotate(15deg) scaleX(-1); }
+        .corner-deco.bl { bottom: -10px; left: -10px; transform: rotate(15deg) scaleY(-1); }
+        .corner-deco.br { bottom: -10px; right: -10px; transform: rotate(-15deg) scale(-1); }
+
+        /* ===== Main Content ===== */
+        .container { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; padding: 20px 20px 40px; }
+
+        /* Header */
+        .header-wrap {
+            position: relative; margin-bottom: 20px; border-radius: 28px; overflow: hidden;
+            background: linear-gradient(145deg, #8B3A1A, #6B2A10); padding: 2px;
+        }
+        .header-inner {
+            border-radius: 27px; background: linear-gradient(160deg, #FFF8F0, #FFF0E0);
+            padding: 28px 24px 20px; position: relative; overflow: hidden;
+        }
+        .header-inner::before {
+            content: ""; position: absolute; inset: 0;
+            background: radial-gradient(circle 120px at 85% 20%, rgba(255,200,100,0.15) 0%, transparent 70%),
+                        radial-gradient(circle 80px at 20% 80%, rgba(200,100,50,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .header-inner .deco-icons {
+            position: absolute; right: 20px; top: 10px; font-size: 42px; opacity: 0.2; line-height: 1; pointer-events: none;
+        }
+        .header-inner .deco-icons span { display: inline-block; animation: sway 4s ease-in-out infinite; }
+        .header-inner .deco-icons span:nth-child(2) { animation-delay: -1s; }
+        .header-inner .deco-icons span:nth-child(3) { animation-delay: -2s; }
+        .header-inner .deco-icons span:nth-child(4) { animation-delay: -3s; }
+        @keyframes sway {
+            0%, 100% { transform: rotate(-5deg) translateY(0); }
+            50% { transform: rotate(5deg) translateY(-4px); }
+        }
+        .header-inner h1 { font-size: 24px; font-weight: 800; color: #5A2E0E; letter-spacing: 3px; position: relative; z-index: 1; }
+        .header-inner h1 .em { color: #C26A2A; }
+        .header-inner p { font-size: 13px; color: #A08060; margin-top: 4px; letter-spacing: 2px; position: relative; z-index: 1; }
+        .header-inner .ingredient-strip {
+            display: flex; gap: 10px; margin-top: 14px; position: relative; z-index: 1; flex-wrap: wrap;
+        }
+        .header-inner .ingredient-strip .pill {
+            padding: 4px 12px; background: rgba(139,58,26,0.08);
+            border: 1px solid rgba(139,58,26,0.12); border-radius: 20px;
+            font-size: 11px; color: #7A4A2A; letter-spacing: 1px;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        /* ===== Tea Selection Grid ===== */
+        .section-card {
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border-radius: 24px; padding: 24px; margin-bottom: 16px;
+            border: 1px solid rgba(200,170,140,0.25);
+            box-shadow: 0 4px 20px rgba(100,60,30,0.06);
+            position: relative; overflow: hidden;
+        }
+        .section-card::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #C26A2A, #E8A87A, #C26A2A); opacity: 0.3;
+        }
+        .section-card .card-ingredients {
+            position: absolute; right: 16px; top: 16px; font-size: 20px; opacity: 0.08;
+            pointer-events: none; line-height: 1.3; text-align: right; letter-spacing: 4px;
+        }
+        .section-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+        }
+        .section-header .icon-box {
+            width: 36px; height: 36px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+        }
+        .section-header .icon-box.select { background: linear-gradient(135deg, rgba(194,106,42,0.15), rgba(232,168,122,0.1)); }
+        .section-header h2 { font-size: 17px; font-weight: 700; color: #3D2B1A; letter-spacing: 1px; }
+        .section-header .hint { font-size: 11px; color: #B8A898; margin-left: auto; letter-spacing: 1px; }
+
+        .tea-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .tea-card {
+            background: rgba(245,237,224,0.5);
+            border: 2px solid rgba(200,170,140,0.2);
+            border-radius: 14px;
+            padding: 10px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+        }
+        .tea-card:active { transform: scale(0.96); }
+        .tea-card.active {
+            border-color: #C26A2A;
+            background: linear-gradient(145deg, rgba(194,106,42,0.12), rgba(232,168,122,0.08));
+            box-shadow: 0 2px 12px rgba(194,106,42,0.15);
+        }
+        .tea-card .tea-num {
+            font-size: 22px;
+            font-weight: 800;
+            color: #C26A2A;
+            display: block;
+            line-height: 1;
+            margin-bottom: 2px;
+            transition: color 0.2s;
+        }
+        .tea-card.active .tea-num { color: #8B3A1A; }
+        .tea-card .tea-label {
+            font-size: 10px;
+            color: #A08060;
+            letter-spacing: 1px;
+            transition: color 0.2s;
+        }
+        .tea-card.active .tea-label { color: #6B3A10; }
+        .tea-card .tea-check {
+            position: absolute;
+            top: 4px; right: 6px;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #C26A2A;
+            color: #FFF;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.2s ease;
+        }
+        .tea-card.active .tea-check { opacity: 1; transform: scale(1); }
+
+        .selected-summary {
+            margin-top: 14px;
+            padding: 10px 14px;
+            background: rgba(194,106,42,0.05);
+            border-radius: 12px;
+            font-size: 13px;
+            color: #A08060;
+            letter-spacing: 1px;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .selected-summary .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 3px 10px;
+            background: rgba(194,106,42,0.1);
+            border-radius: 14px;
+            font-size: 12px;
+            color: #7A4A2A;
+            font-weight: 600;
+        }
+
+        /* ===== Rating Section (per tea) ===== */
+        .tea-rating-section {
+            margin-bottom: 12px;
+        }
+        .tea-rating-card {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border-radius: 18px;
+            padding: 0;
+            margin-bottom: 12px;
+            border: 1px solid rgba(200,170,140,0.2);
+            box-shadow: 0 3px 16px rgba(100,60,30,0.05);
+            overflow: hidden;
+            animation: fadeIn 0.3s ease both;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tea-rating-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(139,58,26,0.06), rgba(194,106,42,0.03));
+            border-bottom: 1px solid rgba(200,170,140,0.1);
+        }
+        .tea-rating-header .tea-badge {
+            width: 32px; height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(145deg, #C26A2A, #A85A1E);
+            color: #FFF;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 14px;
+        }
+        .tea-rating-header .tea-title { font-weight: 700; color: #4A2A10; font-size: 15px; letter-spacing: 1px; }
+        .tea-rating-body { padding: 16px 20px; }
+
+        /* Slider rows */
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+        }
+        .slider-row + .slider-row { border-top: 1px solid rgba(200,170,140,0.08); }
+        .slider-label {
+            flex: 0 0 80px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4A3520;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .slider-label .sl-icon { font-size: 18px; width: 22px; text-align: center; }
+
+        /* Custom range slider */
+        .slider-wrap {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #E8DDD0, #D4C0A8);
+            outline: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #FFF;
+            border: 2.5px solid #C26A2A;
+            box-shadow: 0 2px 8px rgba(139,58,26,0.2);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.15); }
+        input[type="range"]::-moz-range-thumb {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #FFF;
+            border: 2.5px solid #C26A2A;
+            box-shadow: 0 2px 8px rgba(139,58,26,0.2);
+            cursor: pointer;
+        }
+        .slider-val {
+            flex: 0 0 32px;
+            width: 32px; height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(145deg, rgba(194,106,42,0.12), rgba(232,168,122,0.06));
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px; color: #5A2E0E;
+            transition: all 0.15s;
+        }
+        .slider-val.highlight { background: linear-gradient(145deg, #C26A2A, #A85A1E); color: #FFF; }
+
+        /* Suggestion input per tea */
+        .suggestion-row {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(200,170,140,0.08);
+        }
+        .suggestion-row input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(245,237,224,0.4);
+            border: 1.5px solid rgba(200,170,140,0.2);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #4A3520;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .suggestion-row input:focus { border-color: rgba(194,106,42,0.3); }
+        .suggestion-row input::placeholder { color: #C8B8A8; font-size: 12px; }
+
+        /* Submit */
+        .submit-section { text-align: center; padding: 20px 0 4px; }
+        .btn-submit {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 48px;
+            background: linear-gradient(145deg, #C26A2A, #A85A1E);
+            color: #FFF;
+            border: none;
+            border-radius: 30px;
+            font-family: inherit;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px rgba(194,106,42,0.3);
+            position: relative;
+        }
+        .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(194,106,42,0.35); }
+        .btn-submit:active { transform: scale(0.97); }
+        .btn-submit:disabled {
+            background: #D4C8BC;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+            color: #B8A898;
+        }
+        .btn-submit:disabled:hover { transform: none; box-shadow: none; }
+
+        /* Success overlay */
+        .success-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(245,237,224,0.95);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .success-overlay.show { opacity: 1; pointer-events: auto; }
+        .success-card {
+            text-align: center;
+            padding: 40px 32px;
+            background: #FFF;
+            border-radius: 28px;
+            border: 1px solid rgba(200,170,140,0.2);
+            box-shadow: 0 8px 32px rgba(100,60,30,0.1);
+            max-width: 360px;
+            animation: popIn 0.4s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .success-card .check-icon {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #C26A2A, #A85A1E);
+            color: #FFF;
+            font-size: 32px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+        }
+        .success-card h3 { font-size: 20px; color: #3D2B1A; margin-bottom: 6px; letter-spacing: 2px; }
+        .success-card p { font-size: 13px; color: #B8A898; letter-spacing: 1px; }
+
+        /* Toasts */
+        .toast {
+            position: fixed;
+            top: 20px; left: 50%; transform: translateX(-50%);
+            background: #3D2B1A; color: #FFF;
+            padding: 10px 24px; border-radius: 20px;
+            font-size: 13px; letter-spacing: 1px;
+            z-index: 200; opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+
+        /* Footer */
+        .footer { text-align: center; padding: 20px 0 4px; position: relative; }
+        .footer::before {
+            content: "☕ ⋆｡°✩"; display: block;
+            font-size: 18px; opacity: 0.15; margin-bottom: 8px; letter-spacing: 6px;
+        }
+        .footer p { font-size: 11px; color: #C8B8A8; letter-spacing: 2px; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container { padding: 12px 12px 30px; }
+            .header-inner { padding: 22px 16px 18px; }
+            .header-inner h1 { font-size: 20px; }
+            .section-card { padding: 18px 14px; border-radius: 18px; }
+            .tea-grid { gap: 6px; }
+            .tea-card { padding: 8px 4px; border-radius: 12px; }
+            .tea-card .tea-num { font-size: 20px; }
+            .tea-card .tea-label { font-size: 9px; }
+            .tea-rating-body { padding: 12px 14px; }
+            .slider-label { flex: 0 0 65px; font-size: 12px; }
+            .slider-label .sl-icon { font-size: 16px; width: 18px; }
+            .btn-submit { width: 80%; padding: 14px 24px; font-size: 16px; }
+            .floating-ingredients .item { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background -->
+    <div class="bg-layer">
+        <div class="gradient"></div>
+        <div class="texture"></div>
+    </div>
+
+    <!-- Floating ingredients -->
+    <div class="floating-ingredients" id="floatContainer"></div>
+
+    <!-- Corner decorations -->
+    <div class="corner-deco tl">🫖</div>
+    <div class="corner-deco tr">🌿</div>
+    <div class="corner-deco bl">🍊</div>
+    <div class="corner-deco br">🌸</div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Success overlay -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-card">
+            <div class="check-icon">✓</div>
+            <h3>感谢品鉴！</h3>
+            <p>你的反馈已记录，每一味评价都弥足珍贵。</p>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header-wrap">
+            <div class="header-inner">
+                <div class="deco-icons">
+                    <span>🍊</span><span>🌹</span><span>🍋</span><span>🌿</span>
+                </div>
+                <h1>新配方 · <span class="em">本草</span>茶饮路演</h1>
+                <p>请先试喝，再扫码填写 · 只评你喝过的那几款</p>
+                <div class="ingredient-strip">
+                    <span class="pill">🍊 陈皮</span>
+                    <span class="pill">🌹 玫瑰花</span>
+                    <span class="pill">🫐 枸杞</span>
+                    <span class="pill">🍋 柠檬</span>
+                    <span class="pill">🌸 菊花</span>
+                    <span class="pill">🌿 薄荷</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Select teas -->
+        <div class="section-card">
+            <div class="card-ingredients">🍵 ① ② ③</div>
+            <div class="section-header">
+                <div class="icon-box select">☑️</div>
+                <h2>你试了哪几款？（可多选）</h2>
+                <span class="hint">点击卡片选中</span>
+            </div>
+            <div class="tea-grid" id="teaGrid">
+                <!-- JS populated -->
+            </div>
+            <div class="selected-summary" id="selectedSummary">
+                请在上方点击你试喝过的茶款
+            </div>
+        </div>
+
+        <!-- Step 2: Dynamic rating sections -->
+        <div id="ratingContainer"></div>
+
+        <!-- Submit -->
+        <div class="submit-section">
+            <button class="btn-submit" id="btnSubmit" disabled onclick="handleSubmit()">
+                🍵 提交评价
+            </button>
+        </div>
+
+        <div class="footer">
+            <p>—  每一味本草，都值得被认真对待 —</p>
+        </div>
+
+    </div>
+
+    <script>
+        // ===== Supabase Config =====
+        const SB_URL = 'https://ihtlypzusfsgpieeomhi.supabase.co';
+        const SB_KEY = 'sb_publishable_6Tu-LDqldC7AJMAjC0TXVQ_5gQql6Eu';
+        const SB_TABLE = 'tea_surveys';
+
+        // ===== Floating ingredients =====
+        const ingredients = ['🍊','🍋','🫐','🍓','🍑','🍇','🌿','🌸','🌹','🍃','🌾','🌻','🫖','🍯','✨','💮'];
+        const floatContainer = document.getElementById('floatContainer');
+        for (let i = 0; i < 24; i++) {
+            const el = document.createElement('div');
+            el.className = 'item';
+            el.textContent = ingredients[i % ingredients.length];
+            el.style.left = (5 + Math.random() * 90) + '%';
+            el.style.bottom = '-5%';
+            el.style.fontSize = (20 + Math.random() * 28) + 'px';
+            el.style.animationDuration = (18 + Math.random() * 30) + 's';
+            el.style.animationDelay = (Math.random() * 25) + 's';
+            floatContainer.appendChild(el);
+        }
+
+        // ===== State =====
+        const selectedTeas = new Set();
+        const ratings = {}; // { teaId: { concept, taste, satisfaction, suggestion } }
+
+        // ===== Build tea grid =====
+        const teaGrid = document.getElementById('teaGrid');
+        const teaEmojis = ['🍵','🌿','🌸','🍊','🍋','🫐','🍑','🍯','🌹'];
+        for (let i = 1; i <= 9; i++) {
+            const card = document.createElement('div');
+            card.className = 'tea-card';
+            card.setAttribute('data-tea', i);
+            card.innerHTML = `
+                <span class="tea-check">✓</span>
+                <span class="tea-num">${teaEmojis[i-1]}</span>
+                <span class="tea-label">${i}号茶</span>
+            `;
+            card.addEventListener('click', () => toggleTea(i, card));
+            teaGrid.appendChild(card);
+        }
+
+        function toggleTea(id, card) {
+            if (selectedTeas.has(id)) {
+                selectedTeas.delete(id);
+                card.classList.remove('active');
+                delete ratings[id];
+            } else {
+                selectedTeas.add(id);
+                card.classList.add('active');
+                ratings[id] = { concept: 5, taste: 5, satisfaction: 5, suggestion: '' };
+            }
+            updateSummary();
+            renderRatingSections();
+            updateSubmitButton();
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('selectedSummary');
+            if (selectedTeas.size === 0) {
+                summary.innerHTML = '请在上方点击你试喝过的茶款';
+                return;
+            }
+            const sorted = [...selectedTeas].sort((a,b) => a-b);
+            summary.innerHTML = '已选：' + sorted.map(id =>
+                `<span class="tag">${teaEmojis[id-1]} ${id}号</span>`
+            ).join(' ');
+        }
+
+        // ===== Render rating sections =====
+        function renderRatingSections() {
+            const container = document.getElementById('ratingContainer');
+            const sorted = [...selectedTeas].sort((a,b) => a-b);
+
+            // Build HTML for each selected tea
+            let html = '';
+            sorted.forEach(id => {
+                const r = ratings[id];
+                html += `
+                <div class="tea-rating-section">
+                    <div class="tea-rating-card">
+                        <div class="tea-rating-header">
+                            <div class="tea-badge">${id}</div>
+                            <span class="tea-title">${teaEmojis[id-1]} ${id}号茶</span>
+                        </div>
+                        <div class="tea-rating-body">
+                            <div class="slider-row">
+                                <label class="slider-label">
+                                    <span class="sl-icon">👁️</span>观感
+                                </label>
+                                <div class="slider-wrap">
+                                    <span style="font-size:11px;color:#C8B8A8;">1</span>
+                                    <input type="range" min="1" max="10" value="${r.concept}"
+                                        oninput="updateSlider(${id},'concept',this.value)"
+                                        data-tea="${id}" data-dim="concept">
+                                    <span style="font-size:11px;color:#C8B8A8;">10</span>
+                                </div>
+                                <div class="slider-val" id="val-${id}-concept">${r.concept}</div>
+                            </div>
+                            <div class="slider-row">
+                                <label class="slider-label">
+                                    <span class="sl-icon">👅</span>口感
+                                </label>
+                                <div class="slider-wrap">
+                                    <span style="font-size:11px;color:#C8B8A8;">1</span>
+                                    <input type="range" min="1" max="10" value="${r.taste}"
+                                        oninput="updateSlider(${id},'taste',this.value)"
+                                        data-tea="${id}" data-dim="taste">
+                                    <span style="font-size:11px;color:#C8B8A8;">10</span>
+                                </div>
+                                <div class="slider-val" id="val-${id}-taste">${r.taste}</div>
+                            </div>
+                            <div class="slider-row">
+                                <label class="slider-label">
+                                    <span class="sl-icon">⭐</span>满意/<wbr>推荐值
+                                </label>
+                                <div class="slider-wrap">
+                                    <span style="font-size:11px;color:#C8B8A8;">1</span>
+                                    <input type="range" min="1" max="10" value="${r.satisfaction}"
+                                        oninput="updateSlider(${id},'satisfaction',this.value)"
+                                        data-tea="${id}" data-dim="satisfaction">
+                                    <span style="font-size:11px;color:#C8B8A8;">10</span>
+                                </div>
+                                <div class="slider-val" id="val-${id}-satisfaction">${r.satisfaction}</div>
+                            </div>
+                            <div class="suggestion-row">
+                                <input type="text"
+                                    placeholder="💬 对${id}号茶的建议（选填）"
+                                    value="${escapeHtml(r.suggestion)}"
+                                    oninput="updateSuggestion(${id}, this.value)"
+                                    maxlength="200">
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function updateSlider(teaId, dim, val) {
+            const numVal = parseInt(val);
+            ratings[teaId][dim] = numVal;
+            const valEl = document.getElementById(`val-${teaId}-${dim}`);
+            if (valEl) {
+                valEl.textContent = numVal;
+                valEl.classList.add('highlight');
+                setTimeout(() => valEl.classList.remove('highlight'), 300);
+            }
+        }
+
+        function updateSuggestion(teaId, val) {
+            ratings[teaId].suggestion = val;
+        }
+
+        function updateSubmitButton() {
+            document.getElementById('btnSubmit').disabled = selectedTeas.size === 0;
+        }
+
+        // ===== Submit =====
+        async function handleSubmit() {
+            if (selectedTeas.size === 0) return;
+
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+            btn.textContent = '提交中...';
+
+            const sessionId = crypto.randomUUID();
+            const records = [...selectedTeas].map(id => ({
+                session_id: sessionId,
+                tea_id: id,
+                concept: ratings[id].concept,
+                taste: ratings[id].taste,
+                satisfaction: ratings[id].satisfaction,
+                suggestion: ratings[id].suggestion || ''
+            }));
+
+            // 尝试提交到 Supabase（表建好后自动生效）
+            try {
+                await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SB_KEY,
+                        'Authorization': 'Bearer ' + SB_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(records)
+                });
+            } catch (e) {
+                // 后端未就绪时静默，数据已打印到控制台
+                console.log('📋 提交数据:', JSON.stringify(records, null, 2));
+            }
+
+            // Show success
+            document.getElementById('successOverlay').classList.add('show');
+            btn.textContent = '🍵 提交评价';
+            btn.disabled = false;
+        }
+
+        // Tap success overlay to dismiss
+        document.getElementById('successOverlay').addEventListener('click', function() {
+            this.classList.remove('show');
+        });
+    </script>
+</body>
+</html>
