@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理员看板 · 夏日消暑神器</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+    background: linear-gradient(135deg, #E8F4F8 0%, #D4EDDA 100%);
+    min-height: 100vh;
+    color: #2c3e50;
+  }
+
+  /* ===== Password Overlay ===== */
+  #password-overlay {
+    position: fixed; inset:0; z-index:9999;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+  }
+  #password-overlay.hidden { display:none; }
+
+  .password-card {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    width: 360px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+  }
+  .password-card .lock-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+  .password-card h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+  }
+  .password-card p {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 24px;
+  }
+  .password-card input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid rgba(74,144,184,0.25);
+    border-radius: 12px;
+    font-size: 20px;
+    letter-spacing: 8px;
+    text-align: center;
+    outline: none;
+    background: rgba(255,255,255,0.7);
+    transition: border-color 0.2s;
+  }
+  .password-card input:focus {
+    border-color: #4A90B8;
+  }
+  .password-card .error-msg {
+    color: #e74c3c;
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 20px;
+  }
+  .password-card .btn-unlock {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #4A90B8, #7BC4A8);
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .password-card .btn-unlock:hover { opacity:0.9; }
+  .password-card .btn-unlock:active { transform:scale(0.97); }
+
+  /* ===== Main Container ===== */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  /* ===== Top Bar ===== */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .top-bar h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-right: auto;
+  }
+  .top-bar .back-link {
+    font-size: 14px;
+    color: #4A90B8;
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.5);
+    transition: background 0.2s;
+  }
+  .top-bar .back-link:hover { background: rgba(255,255,255,0.85); }
+  .top-bar .icon-btn {
+    width: 38px; height: 38px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(6px);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .top-bar .icon-btn:hover { background: rgba(255,255,255,0.9); }
+  .top-bar .icon-btn:active { transform:scale(0.92); }
+  .top-bar .icon-btn.spinning .spin-target {
+    display: inline-block;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .top-bar .export-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4A90B8, #7BC4A8);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+  .top-bar .export-btn:hover { opacity:0.9; }
+  .top-bar .export-btn:active { transform:scale(0.96); }
+
+  /* ===== Stats Row ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .stat-card .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2c3e50;
+    line-height: 1.2;
+  }
+  .stat-card .stat-label {
+    font-size: 13px;
+    color: #7f8c8d;
+    margin-top: 4px;
+  }
+  .stat-card.highlight .stat-value {
+    color: #F5A623;
+  }
+
+  /* ===== Ranking List ===== */
+  .rank-list { display:flex; flex-direction:column; gap:10px; }
+
+  .rank-item {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.15s;
+  }
+  .rank-item:hover { transform:translateX(4px); }
+
+  .rank-item .rank-num {
+    width: 32px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #95a5a6;
+    text-align: center;
+    flex-shrink:0;
+  }
+  .rank-item.top1 .rank-num,
+  .rank-item.top2 .rank-num,
+  .rank-item.top3 .rank-num {
+    font-size: 22px;
+  }
+  .rank-item .emoji { font-size: 26px; flex-shrink:0; }
+  .rank-item .name {
+    flex:1;
+    font-size: 15px;
+    font-weight: 500;
+    color: #2c3e50;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rank-item .vote-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4A90B8;
+    flex-shrink:0;
+    min-width: 32px;
+    text-align:right;
+  }
+
+  .rank-item .bar-wrap {
+    width: 120px;
+    flex-shrink:0;
+  }
+  .rank-item .bar-bg {
+    height: 8px;
+    background: rgba(74,144,184,0.12);
+    border-radius: 4px;
+    overflow:hidden;
+  }
+  .rank-item .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #4A90B8, #7BC4A8);
+    width: 0%;
+    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .rank-item.top1 .bar-fill { background: linear-gradient(90deg, #F5A623, #f7c948); }
+  .rank-item.top1 { border-color: rgba(245,166,35,0.25); }
+
+  /* ===== Empty & Loading States ===== */
+  .empty-state, .loading-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { color:#95a5a6; font-size:15px; }
+
+  .loading-dots {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .loading-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #4A90B8;
+    animation: dot-bounce 1.2s ease-in-out infinite;
+  }
+  .loading-dots span:nth-child(2) { animation-delay:0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay:0.4s; }
+  @keyframes dot-bounce {
+    0%,80%,100% { transform:scale(0.6); opacity:0.3; }
+    40% { transform:scale(1); opacity:1; }
+  }
+  .loading-state p { margin-top:14px; color:#7f8c8d; font-size:14px; }
+
+  .error-state {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(231,76,60,0.25);
+    border-radius: 16px;
+  }
+  .error-state .err-icon { font-size: 40px; margin-bottom: 8px; }
+  .error-state p { color:#e74c3c; font-size:14px; }
+
+  .update-time {
+    text-align: center;
+    font-size: 12px;
+    color: #95a5a6;
+    margin-top: 16px;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 640px) {
+    .container { padding:16px 14px 40px; }
+    .top-bar h1 { font-size:18px; width:100%; margin-bottom:4px; }
+    .stats-row { grid-template-columns:repeat(3,1fr); gap:10px; }
+    .stat-card .stat-value { font-size:22px; }
+    .stat-card { padding:14px 10px; }
+    .rank-item { flex-wrap:wrap; gap:8px; padding:12px 14px; }
+    .rank-item .bar-wrap { width:100%; order:99; margin-top:2px; }
+    .rank-item .name { font-size:14px; }
+    .password-card { padding:28px 24px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Password Overlay ===== -->
+<div id="password-overlay">
+  <div class="password-card">
+    <div class="lock-icon">🔒</div>
+    <h2>管理员验证</h2>
+    <p>请输入6位密码进入看板</p>
+    <input type="password" id="password-input" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="······">
+    <div class="error-msg" id="password-error"></div>
+    <button class="btn-unlock" id="btn-unlock">解锁</button>
+  </div>
+</div>
+
+<!-- ===== Main Content ===== -->
+<div class="container" id="main-content" style="display:none;">
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <h1>管理员看板</h1>
+    <a class="back-link" href="index.html" target="_blank">← 返回投票页</a>
+    <button class="icon-btn" id="btn-refresh" title="刷新数据">
+      <span class="spin-target">🔄</span>
+    </button>
+    <button class="export-btn" id="btn-export">导出 CSV</button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-total-votes">—</div>
+      <div class="stat-label">总投票数</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-total-users">—</div>
+      <div class="stat-label">参与人数</div>
+    </div>
+    <div class="stat-card highlight">
+      <div class="stat-value" id="stat-top-drink">—</div>
+      <div class="stat-label">最高票饮品</div>
+    </div>
+  </div>
+
+  <!-- Ranking Area -->
+  <div id="rank-area"></div>
+
+  <div class="update-time" id="update-time"></div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const BEVERAGES = [
+    {id:1, name:"翡翠橄榄油柑", emoji:"🫒"},
+    {id:2, name:"陈皮紫苏", emoji:"🌿"},
+    {id:3, name:"陈皮酸梅汤", emoji:"🫙"},
+    {id:4, name:"丝绒红豆乳", emoji:"🫘"},
+    {id:5, name:"芋见抹茶", emoji:"🍵"},
+    {id:6, name:"罗汉清火茶", emoji:"🍃"},
+    {id:7, name:"元气熬夜水（养肝茶）", emoji:"✨"},
+    {id:8, name:"皮皮闹乌龙（陈皮秋梨乌龙冻）", emoji:"🍐"},
+    {id:9, name:"茅根竹蔗水", emoji:"🎋"},
+    {id:10, name:"茉莉奶绿", emoji:"🌸"},
+    {id:11, name:"斑斓椰椰冻", emoji:"🥥"},
+    {id:12, name:"秋梨润椰冻", emoji:"🍐"},
+    {id:13, name:"海石花椰冻", emoji:"🌊"},
+    {id:14, name:"芒果厚椰乳", emoji:"🥭"},
+    {id:15, name:"轻盈草本茶（祛湿茶）", emoji:"🌱"},
+    {id:16, name:"珍珠奶茶", emoji:"🧋"},
+    {id:17, name:"香芋椰奶西米露", emoji:"🟣"},
+    {id:18, name:"暴打柠檬茶", emoji:"🍋"},
+    {id:19, name:"桃胶美人羹", emoji:"🌸"},
+    {id:20, name:"杨枝甘露", emoji:"🥤"},
+    {id:21, name:"仙草椰椰冻", emoji:"🖤"},
+    {id:22, name:"杏仁奶露", emoji:"🥜"},
+    {id:23, name:"陈皮青梅", emoji:"🫒"},
+    {id:24, name:"姜乳茶", emoji:"🫚"},
+    {id:25, name:"绿豆沙", emoji:"🟢"},
+    {id:26, name:"鸭屎香轻乳茶", emoji:"🦆"}
+  ];
+
+  const SB_URL = 'https://ihtlypzusfsgpieeomhi.supabase.co';
+  const SB_KEY = 'sb_publishable_6Tu-LDqldC7AJMAjC0TXVQ_5gQql6Eu';
+  const SB_TABLE = 'summer_votes';
+
+  const beverageMap = {};
+  BEVERAGES.forEach(b => { beverageMap[b.name] = b; });
+
+  // DOM refs
+  const overlay   = document.getElementById('password-overlay');
+  const pwdInput  = document.getElementById('password-input');
+  const pwdError  = document.getElementById('password-error');
+  const btnUnlock = document.getElementById('btn-unlock');
+  const mainCont  = document.getElementById('main-content');
+  const rankArea  = document.getElementById('rank-area');
+  const btnRefresh= document.getElementById('btn-refresh');
+  const btnExport = document.getElementById('btn-export');
+  const statTotalVotes = document.getElementById('stat-total-votes');
+  const statTotalUsers = document.getElementById('stat-total-users');
+  const statTopDrink   = document.getElementById('stat-top-drink');
+  const updateTimeEl   = document.getElementById('update-time');
+
+  // ===== Password Protection =====
+  function unlock() {
+    const val = pwdInput.value.trim();
+    if (val === '111111') {
+      overlay.classList.add('hidden');
+      mainCont.style.display = 'block';
+      fetchData();
+    } else {
+      pwdError.textContent = '密码错误，请重新输入';
+      pwdInput.value = '';
+      pwdInput.focus();
+    }
+  }
+  btnUnlock.addEventListener('click', unlock);
+  pwdInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') unlock();
+  });
+  pwdInput.addEventListener('input', function() {
+    pwdError.textContent = '';
+  });
+
+  // ===== Data Fetching =====
+  let cachedVotes = [];
+
+  async function fetchData() {
+    showLoading();
+    try {
+      const url = `${SB_URL}/rest/v1/${SB_TABLE}?select=beverage_name,session_id&limit=5000`;
+      const resp = await fetch(url, {
+        headers: {
+          'apikey': SB_KEY,
+          'Authorization': `Bearer ${SB_KEY}`
+        }
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const rows = await resp.json();
+      cachedVotes = rows;
+      render(rows);
+    } catch (err) {
+      showError('数据加载失败：' + err.message);
+    }
+  }
+
+  // ===== Render =====
+  function render(rows) {
+    if (!rows || rows.length === 0) {
+      showEmpty();
+      return;
+    }
+
+    // aggregate
+    const countMap = {};
+    const sessionSet = new Set();
+    rows.forEach(r => {
+      const name = r.beverage_name;
+      if (name) {
+        countMap[name] = (countMap[name] || 0) + 1;
+      }
+      if (r.session_id) {
+        sessionSet.add(r.session_id);
+      }
+    });
+
+    // sort
+    const sorted = Object.entries(countMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const totalVotes = rows.length;
+    const totalUsers = sessionSet.size;
+    const maxCount   = sorted.length > 0 ? sorted[0].count : 0;
+    const topName    = sorted.length > 0 ? sorted[0].name : '—';
+
+    // stats
+    statTotalVotes.textContent = totalVotes;
+    statTotalUsers.textContent = totalUsers;
+    const topBev = beverageMap[topName];
+    statTopDrink.textContent = topBev ? topBev.emoji + ' ' + topName : topName;
+
+    // build ranking HTML
+    let html = '<div class="rank-list">';
+    sorted.forEach((item, idx) => {
+      const rank = idx + 1;
+      const bev  = beverageMap[item.name];
+      const emoji = bev ? bev.emoji : '🍹';
+      const pct  = maxCount > 0 ? (item.count / maxCount * 100) : 0;
+
+      let rankLabel = rank;
+      let topClass = '';
+      if (rank === 1) { rankLabel = '🥇'; topClass = 'top1'; }
+      else if (rank === 2) { rankLabel = '🥈'; topClass = 'top2'; }
+      else if (rank === 3) { rankLabel = '🥉'; topClass = 'top3'; }
+
+      html += `
+        <div class="rank-item ${topClass}" data-rank="${rank}">
+          <div class="rank-num">${rankLabel}</div>
+          <span class="emoji">${emoji}</span>
+          <span class="name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+          <span class="vote-count">${item.count}</span>
+          <div class="bar-wrap">
+            <div class="bar-bg">
+              <div class="bar-fill" data-pct="${pct}" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    rankArea.innerHTML = html;
+
+    // animate progress bars
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.bar-fill').forEach(el => {
+          el.style.width = el.dataset.pct + '%';
+        });
+      });
+    });
+
+    updateTimeEl.textContent = '更新于 ' + new Date().toLocaleString('zh-CN');
+  }
+
+  function showLoading() {
+    rankArea.innerHTML = `
+      <div class="loading-state">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <p>正在加载投票数据…</p>
+      </div>
+    `;
+  }
+
+  function showEmpty() {
+    rankArea.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <p>暂无投票数据</p>
+      </div>
+    `;
+  }
+
+  function showError(msg) {
+    rankArea.innerHTML = `
+      <div class="error-state">
+        <div class="err-icon">⚠️</div>
+        <p>${escapeHtml(msg)}</p>
+      </div>
+    `;
+  }
+
+  // ===== Refresh =====
+  btnRefresh.addEventListener('click', function() {
+    this.classList.add('spinning');
+    fetchData().finally(() => {
+      this.classList.remove('spinning');
+    });
+  });
+
+  // ===== CSV Export =====
+  btnExport.addEventListener('click', function() {
+    if (!cachedVotes || cachedVotes.length === 0) {
+      alert('暂无数据可导出');
+      return;
+    }
+    // re-aggregate
+    const countMap = {};
+    cachedVotes.forEach(r => {
+      const name = r.beverage_name;
+      if (name) countMap[name] = (countMap[name] || 0) + 1;
+    });
+    const sorted = Object.entries(countMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const total = cachedVotes.length;
+    let csv = '\uFEFF';
+    csv += '排名,饮品名称,得票数,占比\n';
+    sorted.forEach((item, idx) => {
+      const pct = total > 0 ? (item.count / total * 100).toFixed(1) + '%' : '0%';
+      csv += `${idx+1},"${item.name}",${item.count},${pct}\n`;
+    });
+    csv += `\n总计,,${total},100%\n`;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '夏日消暑饮品投票排名.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // ===== Utility =====
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+})();
+</script>
+</body>
+</html>
