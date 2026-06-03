@@ -434,6 +434,27 @@ body{
   margin-top:12px;
 }
 
+/* ===== VOTER CODE DISPLAY ===== */
+.voter-code{
+  font-size:clamp(2.4rem,7vw,3.2rem);
+  font-weight:800;
+  letter-spacing:0.15em;
+  color:#F5A623;
+  background:rgba(245,166,35,0.1);
+  border:2.5px dashed rgba(245,166,35,0.3);
+  border-radius:16px;
+  padding:12px 28px;
+  margin:12px auto 8px;
+  display:inline-block;
+  font-variant-numeric:tabular-nums;
+  line-height:1.2;
+}
+.code-hint{
+  font-size:0.85rem;
+  color:#9BB5C7;
+  margin-bottom:20px;
+}
+
 /* ===== ERROR TOAST ===== */
 .toast{
   position:fixed;
@@ -484,6 +505,29 @@ body{
   .card-name{font-size:0.7rem}
 }
 
+/* ===== ALREADY VOTED BANNER ===== */
+.already-voted-banner{
+  display:none;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+  background:rgba(245,166,35,0.12);
+  border:1.5px solid rgba(245,166,35,0.25);
+  border-radius:12px;
+  padding:10px 20px;
+  margin-top:16px;
+  font-size:0.9rem;
+  color:#2c3e50;
+}
+.already-voted-banner .code-display{
+  font-size:1.3rem;
+  font-weight:800;
+  color:#F5A623;
+  letter-spacing:0.12em;
+  font-variant-numeric:tabular-nums;
+}
+
 /* ===== KEYFRAMES ===== */
 @keyframes float{
   0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0}
@@ -524,6 +568,10 @@ body{
     <span class="votes-indicator-number" id="remainingVotes">3</span>
     <span class="votes-indicator-total">/ 3</span>
   </div>
+  <div class="already-voted-banner" id="alreadyVotedBanner">
+    <span>🎉 你已参与投票 · 编码：</span>
+    <span class="code-display" id="existingCodeDisplay">---</span>
+  </div>
 </header>
 
 <!-- Beverage Grid -->
@@ -539,7 +587,9 @@ body{
   <div class="overlay-content">
     <div class="overlay-icon">&#10003;</div>
     <h2>投票成功！</h2>
-    <p>感谢你的参与，让我们一起度过清凉一夏！</p>
+    <p>请记住你的抽奖编码</p>
+    <div class="voter-code" id="voterCode">---</div>
+    <p class="code-hint">截图保存，中奖凭此编码到店领奖</p>
     <button class="overlay-btn" onclick="closeOverlay()">我知道了</button>
   </div>
 </div>
@@ -577,14 +627,18 @@ const BEVERAGES = [
   {id:26, name:"鸭屎香轻乳茶", emoji:"🦆"}
 ];
 
-const SB_URL = 'https://ihtlyzpusfsgpieeomhi.supabase.co';
+const SB_URL = 'https://ihtlypzusfsgpieeomhi.supabase.co';
 const SB_KEY = 'sb_publishable_6Tu-LDqldC7AJMAjC0TXVQ_5gQql6Eu';
 const SB_TABLE = 'summer_votes';
+const SB_CODE_TABLE = 'voter_codes';
 
 const TOTAL_VOTES = 3;
 let remaining = TOTAL_VOTES;
 const votes = {};           // {beverageId: count}
 let submitted = false;
+let hasExistingVote = false;
+let existingCode = null;
+let deviceFingerprint = null;
 
 const grid = document.getElementById('beverageGrid');
 const remainingEl = document.getElementById('remainingVotes');
@@ -598,7 +652,7 @@ function render(){
   BEVERAGES.forEach(b => {
     const count = votes[b.id] || 0;
     const card = document.createElement('div');
-    card.className = 'card' + (count > 0 ? ' card-voted' : '') + (remaining === 0 && count === 0 ? ' card-disabled' : '');
+    card.className = 'card' + (count > 0 ? ' card-voted' : '') + ((remaining === 0 || hasExistingVote) && count === 0 ? ' card-disabled' : '');
     card.dataset.id = b.id;
 
     const emojiSpan = document.createElement('span');
@@ -646,7 +700,7 @@ function render(){
 
 // === Vote Logic ===
 function handleCardClick(id){
-  if(submitted) return;
+  if(submitted || hasExistingVote) return;
   const count = votes[id] || 0;
 
   if(remaining > 0){
@@ -686,14 +740,23 @@ function updateRemaining(){
 
 function updateSubmitBtn(){
   const hasVotes = Object.keys(votes).length > 0 && Object.values(votes).some(v => v > 0);
-  submitBtn.disabled = !hasVotes;
+  submitBtn.disabled = hasExistingVote || !hasVotes;
 }
 
 // === Submission ===
 submitBtn.addEventListener('click', submitVotes);
 
+function generateUUID(){
+  if(typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback for non-secure contexts (file:// etc.)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
 async function submitVotes(){
-  if(submitted) return;
+  if(submitted || hasExistingVote) return;
   const hasVotes = Object.values(votes).some(v => v > 0);
   if(!hasVotes) return;
 
@@ -701,7 +764,7 @@ async function submitVotes(){
   submitBtn.textContent = '提交中...';
   submitBtn.classList.add('submitting');
 
-  const sessionId = crypto.randomUUID();
+  const sessionId = generateUUID();
   const records = [];
 
   for(const id in votes){
@@ -736,6 +799,17 @@ async function submitVotes(){
       throw new Error('HTTP ' + response.status + ': ' + errText);
     }
 
+    // Generate and save unique 3-digit code with device fingerprint
+    const fingerprint = await getDeviceFingerprint();
+    deviceFingerprint = fingerprint;
+    const code = await generateAndSaveCode(sessionId, fingerprint);
+    if(code){
+      document.getElementById('voterCode').textContent = code;
+    } else {
+      document.getElementById('voterCode').textContent = '—';
+      document.querySelector('.code-hint').textContent = '编码生成异常，请联系店员登记';
+    }
+
     submitted = true;
     showOverlay();
   }catch(err){
@@ -743,8 +817,99 @@ async function submitVotes(){
     submitBtn.disabled = false;
     submitBtn.textContent = '提交投票';
     submitBtn.classList.remove('submitting');
-    showError('提交失败，请检查网络后重试');
+    showError('提交失败：' + err.message);
   }
+}
+
+// === Code Generation ===
+async function generateAndSaveCode(sessionId, fingerprint){
+  const maxAttempts = 30;
+  for(let i = 0; i < maxAttempts; i++){
+    const code = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    try{
+      const res = await fetch(`${SB_URL}/rest/v1/${SB_CODE_TABLE}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SB_KEY,
+          'Authorization': `Bearer ${SB_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ session_id: sessionId, code, device_fingerprint: fingerprint })
+      });
+      if(res.ok) return code;
+      // 409 = duplicate code or duplicate fp, silently retry
+    }catch(err){
+      console.warn('Code save error:', err);
+    }
+  }
+  return null;
+}
+
+// === Device Fingerprint ===
+function getCanvasFingerprint(){
+  try{
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 50;
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(100, 1, 62, 20);
+    ctx.fillStyle = '#069';
+    ctx.font = '11pt Arial';
+    ctx.fillText('夏日消暑投票Fp', 2, 15);
+    ctx.fillStyle = 'rgba(102,204,0,0.7)';
+    ctx.font = '16pt sans-serif';
+    ctx.fillText('清涼一夏', 4, 45);
+    return c.toDataURL();
+  } catch(e){ return 'canvas_error'; }
+}
+
+async function getDeviceFingerprint(){
+  const parts = [
+    navigator.userAgent,
+    screen.width, screen.height, screen.colorDepth,
+    navigator.language,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || '',
+    navigator.deviceMemory || '',
+    getCanvasFingerprint()
+  ];
+  const str = parts.join('|||');
+  try{
+    const buf = new TextEncoder().encode(str);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash)).slice(0,16).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e){
+    // Fallback simple hash
+    let h = 0;
+    for(let i = 0; i < str.length; i++){
+      h = ((h << 5) - h) + str.charCodeAt(i);
+      h |= 0;
+    }
+    return 'fp_' + Math.abs(h).toString(16);
+  }
+}
+
+async function checkExistingVote(){
+  const fp = await getDeviceFingerprint();
+  if(!fp) return;
+  try{
+    const url = `${SB_URL}/rest/v1/${SB_CODE_TABLE}?device_fingerprint=eq.${encodeURIComponent(fp)}&select=code&limit=1`;
+    const resp = await fetch(url, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+    if(!resp.ok) return;
+    const data = await resp.json();
+    if(data && data.length > 0){
+      hasExistingVote = true;
+      existingCode = data[0].code;
+      deviceFingerprint = fp;
+      document.getElementById('existingCodeDisplay').textContent = existingCode;
+      document.getElementById('alreadyVotedBanner').style.display = 'flex';
+      render();
+    }
+  } catch(e){}
 }
 
 // === Overlay ===
@@ -769,6 +934,7 @@ function showError(msg){
 
 // === Init ===
 render();
+checkExistingVote();
 </script>
 </body>
 </html>

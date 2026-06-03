@@ -302,6 +302,51 @@
     margin-top: 16px;
   }
 
+  /* ===== Voter Codes Section ===== */
+  .codes-section {
+    margin-top: 40px;
+  }
+  .codes-section h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 16px;
+  }
+  .code-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .code-item {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .code-item .code-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #F5A623;
+    letter-spacing: 0.1em;
+    min-width: 60px;
+    font-variant-numeric: tabular-nums;
+  }
+  .code-item .code-votes {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4A90B8;
+    flex-shrink: 0;
+  }
+  .code-item .code-time {
+    font-size: 13px;
+    color: #95a5a6;
+    margin-left: auto;
+  }
+
   /* ===== Responsive ===== */
   @media (max-width: 640px) {
     .container { padding:16px 14px 40px; }
@@ -363,6 +408,13 @@
   <div id="rank-area"></div>
 
   <div class="update-time" id="update-time"></div>
+
+  <!-- Voter Codes -->
+  <div class="codes-section" id="codes-section" style="display:none;">
+    <h2>🎯 抽奖编码</h2>
+    <div id="codes-list" class="code-list"></div>
+  </div>
+
 </div>
 
 <script>
@@ -442,21 +494,27 @@
 
   // ===== Data Fetching =====
   let cachedVotes = [];
+  let cachedCodes = [];
 
   async function fetchData() {
     showLoading();
     try {
-      const url = `${SB_URL}/rest/v1/${SB_TABLE}?select=beverage_name,session_id&limit=5000`;
-      const resp = await fetch(url, {
-        headers: {
-          'apikey': SB_KEY,
-          'Authorization': `Bearer ${SB_KEY}`
-        }
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const rows = await resp.json();
+      const [votesResp, codesResp] = await Promise.all([
+        fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=beverage_name,session_id&limit=5000`, {
+          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+        }),
+        fetch(`${SB_URL}/rest/v1/voter_codes?select=session_id,code,created_at&order=created_at.desc&limit=5000`, {
+          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+        })
+      ]);
+      if (!votesResp.ok) throw new Error(`HTTP ${votesResp.status}`);
+      const rows = await votesResp.json();
+      let codes = [];
+      if (codesResp.ok) codes = await codesResp.json();
       cachedVotes = rows;
+      cachedCodes = codes;
       render(rows);
+      renderCodes(codes, rows);
     } catch (err) {
       showError('数据加载失败：' + err.message);
     }
@@ -617,6 +675,41 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // ===== Voter Codes Rendering =====
+  function renderCodes(codes, votes) {
+    const section = document.getElementById('codes-section');
+    const list = document.getElementById('codes-list');
+
+    if (!codes || codes.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+
+    // Count votes per session
+    const sessionVoteMap = {};
+    votes.forEach(v => {
+      if (v.session_id) {
+        sessionVoteMap[v.session_id] = (sessionVoteMap[v.session_id] || 0) + 1;
+      }
+    });
+
+    let html = '';
+    codes.forEach(c => {
+      const voteCount = sessionVoteMap[c.session_id] || 0;
+      const time = new Date(c.created_at).toLocaleString('zh-CN');
+      html += `
+        <div class="code-item">
+          <span class="code-value">${escapeHtml(c.code)}</span>
+          <span class="code-votes">${voteCount} 票</span>
+          <span class="code-time">${time}</span>
+        </div>
+      `;
+    });
+    list.innerHTML = html;
   }
 
 })();
