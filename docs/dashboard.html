@@ -84,6 +84,11 @@
         .summary-card .label { font-size: 11px; color: #B8A898; letter-spacing: 2px; margin-bottom: 6px; }
         .summary-card .value { font-size: 32px; font-weight: 800; color: #3D2B1A; line-height: 1; }
         .summary-card .value.small { font-size: 24px; }
+        .top3-list { font-size: 13px; line-height: 1.8; text-align: center; }
+        .top3-list .t3-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .top3-list .t3-medal { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+        .top3-list .t3-name { font-weight: 600; color: #4A2A10; }
+        .top3-list .t3-score { font-weight: 700; color: #C26A2A; min-width: 32px; text-align: right; }
 
         /* Tea Breakdown */
         .section-card {
@@ -233,7 +238,7 @@
         <!-- Summary -->
         <div class="summary-grid">
             <div class="summary-card">
-                <div class="label">提交人数</div>
+                <div class="label">提交次数</div>
                 <div class="value" id="sum-sessions">--</div>
             </div>
             <div class="summary-card">
@@ -245,8 +250,8 @@
                 <div class="value" id="sum-avg">--</div>
             </div>
             <div class="summary-card">
-                <div class="label">最热门茶款</div>
-                <div class="value small" id="sum-top">--</div>
+                <div class="label">最受好评茶饮</div>
+                <div class="value top3-list" id="sum-top">--</div>
             </div>
         </div>
 
@@ -320,19 +325,30 @@
             const total = allData.length;
             const avgAll = allData.reduce((s, r) => s + (r.concept + r.taste + r.satisfaction) / 3, 0) / total;
 
-            // Most popular tea
-            const teaCount = {};
-            allData.forEach(r => { teaCount[r.tea_id] = (teaCount[r.tea_id] || 0) + 1; });
-            let topTea = '--';
-            let topCnt = 0;
-            Object.entries(teaCount).forEach(([id, cnt]) => {
-                if (cnt > topCnt) { topCnt = cnt; topTea = teaEmojis[id - 1] + ' ' + id + '号'; }
+            // Top 3 by average score (concept + taste + satisfaction) / 3
+            const teaScores = {};
+            allData.forEach(r => {
+                if (!teaScores[r.tea_id]) teaScores[r.tea_id] = [];
+                teaScores[r.tea_id].push((r.concept + r.taste + r.satisfaction) / 3);
             });
+            const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+            const ranked = Object.entries(teaScores)
+                .map(([id, scores]) => ({ id: parseInt(id), avg: avg(scores), count: scores.length }))
+                .sort((a, b) => b.avg - a.avg)
+                .slice(0, 3);
+
+            const medals = ['🥇', '🥈', '🥉'];
+            let topHtml = '--';
+            if (ranked.length > 0) {
+                topHtml = ranked.map((t, i) =>
+                    `<div class="t3-row"><span class="t3-medal">${medals[i]}</span><span class="t3-name">${teaEmojis[t.id-1]} ${t.id}号</span><span class="t3-score">${t.avg.toFixed(1)}</span></div>`
+                ).join('');
+            }
 
             document.getElementById('sum-sessions').textContent = sessions;
             document.getElementById('sum-total').textContent = total;
             document.getElementById('sum-avg').textContent = avgAll.toFixed(1);
-            document.getElementById('sum-top').textContent = topTea;
+            document.getElementById('sum-top').innerHTML = topHtml;
         }
 
         function renderTeaBreakdown() {
