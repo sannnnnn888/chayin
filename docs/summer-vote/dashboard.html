@@ -1020,11 +1020,11 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="btn-icon">🧊</span> 抽奖中...';
 
-    // Rolling animation
-    const rollDuration = 2000;
-    const rollInterval = 80;
+    // Rolling animation — 3s, fast→slow deceleration
+    const rollDuration = 3000;
     const startTime = Date.now();
-    let rollTimer;
+    const minDelay = 50;   // fastest at start
+    const maxDelay = 300;  // slowest at end
 
     const winnerNumEl = document.getElementById('winner-number');
     const winnerCodeEl = document.getElementById('winner-code');
@@ -1036,11 +1036,13 @@
     // Check if winner has a lottery code
     const winnerCodeEntry = cachedCodes.find(c => c.session_id === winnerId);
 
+    const chars = '0123456789ABCDEF';
+
     function roll() {
       const elapsed = Date.now() - startTime;
+
       if (elapsed >= rollDuration) {
-        // Stop rolling — show winner
-        clearInterval(rollTimer);
+        // Done — show winner
         winnerNumEl.textContent = displayNum;
         if (winnerCodeEntry) {
           winnerCodeEl.textContent = '抽奖编码: ' + winnerCodeEntry.code;
@@ -1054,30 +1056,19 @@
         return;
       }
 
-      // Show random digits during roll
-      const chars = '0123456789ABCDEF';
+      // Random digits while rolling
       let rolling = '';
       for (let i = 0; i < displayNum.length; i++) {
         rolling += chars[Math.floor(Math.random() * chars.length)];
       }
       winnerNumEl.textContent = rolling;
 
-      // Slow down toward the end — gradually reveal real digits
+      // Delay grows from fast to slow, using ease-out curve
       const progress = elapsed / rollDuration;
-      if (progress > 0.6) {
-        const revealCount = Math.floor((progress - 0.6) / 0.4 * displayNum.length);
-        let partial = '';
-        for (let i = 0; i < displayNum.length; i++) {
-          if (i < revealCount) {
-            partial += displayNum[i];
-          } else {
-            partial += chars[Math.floor(Math.random() * chars.length)];
-          }
-        }
-        winnerNumEl.textContent = partial;
-      }
+      const easeOut = 1 - Math.pow(1 - progress, 3); // cubic ease-out
+      const delay = minDelay + (maxDelay - minDelay) * easeOut;
 
-      rollTimer = setTimeout(roll, rollInterval);
+      setTimeout(roll, delay);
     }
 
     roll();
