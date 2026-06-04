@@ -717,7 +717,7 @@
   <div class="lottery-section">
     <h2>🧊 幸运抽奖</h2>
     <p class="lottery-hint">从所有参与者中随机抽取一位幸运儿</p>
-    <button class="lottery-btn" id="btn-lottery" onclick="startLottery()">
+    <button class="lottery-btn" id="btn-lottery">
       <span class="btn-icon">🧊</span> 开始抽奖
     </button>
   </div>
@@ -745,7 +745,7 @@
       <span style="font-size:16px;">🧊 夏日消暑精美礼品一份 🧊</span>
     </div>
     <div class="ice-flakes">❄ ❄ ❄ ❄ ❄</div>
-    <button class="modal-close" onclick="closeLotteryModal()">我知道了</button>
+    <button class="modal-close" id="btn-modal-close">我知道了</button>
   </div>
 </div>
 
@@ -1098,14 +1098,11 @@
     document.getElementById('lottery-modal-overlay').classList.add('hidden');
   }
 
-  // Close modal on overlay click
-  document.addEventListener('DOMContentLoaded', function() {
-    const overlay = document.getElementById('lottery-modal-overlay');
-    if (overlay) {
-      overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) closeLotteryModal();
-      });
-    }
+  // Bind lottery button + modal close + overlay click
+  document.getElementById('btn-lottery').addEventListener('click', startLottery);
+  document.getElementById('btn-modal-close').addEventListener('click', closeLotteryModal);
+  document.getElementById('lottery-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeLotteryModal();
   });
 
   // ===== Utility =====
