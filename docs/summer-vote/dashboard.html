@@ -420,29 +420,33 @@
   /* ===== Lottery Rolling Digits ===== */
   .lottery-roller {
     display: inline-flex;
-    gap: 6px;
-    font-size: 36px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 4px;
+    gap: 8px;
+    margin-bottom: 18px;
+    font-size: 42px;
+    font-weight: 900;
+    color: #006080;
+    letter-spacing: 6px;
     font-variant-numeric: tabular-nums;
+    min-height: 56px;
+    align-items: center;
   }
   .lottery-roller .digit {
-    display: inline-block;
-    width: 32px;
-    text-align: center;
-    background: rgba(255,255,255,0.15);
-    border-radius: 8px;
-    line-height: 1.4;
-    transition: transform 0.08s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 56px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,100,140,0.1);
+    transition: transform 0.06s ease;
   }
-  .rolling .digit {
-    animation: digit-shuffle 0.1s steps(1) infinite;
+  .lottery-roller.rolling .digit {
+    animation: digit-pop 0.15s ease-in-out infinite;
   }
-  @keyframes digit-shuffle {
-    0% { transform: translateY(-200%); }
-    50% { transform: translateY(0); }
-    100% { transform: translateY(200%); }
+  @keyframes digit-pop {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.85); }
   }
 
   /* ===== Lottery Modal ===== */
@@ -553,20 +557,13 @@
     letter-spacing: 3px;
     margin-bottom: 8px;
   }
-  .lottery-modal .winner-box .winner-number {
-    font-size: 42px;
+  .lottery-modal .winner-box .winner-code {
+    font-size: 48px;
     font-weight: 900;
     color: #006080;
-    letter-spacing: 6px;
+    letter-spacing: 8px;
     font-variant-numeric: tabular-nums;
     text-shadow: 0 2px 4px rgba(0,100,140,0.15);
-  }
-  .lottery-modal .winner-box .winner-code {
-    margin-top: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    color: #F5A623;
-    letter-spacing: 2px;
   }
 
   .lottery-modal .prize-msg {
@@ -717,6 +714,9 @@
   <div class="lottery-section">
     <h2>🧊 幸运抽奖</h2>
     <p class="lottery-hint">从所有参与者中随机抽取一位幸运儿</p>
+    <div class="lottery-roller" id="lottery-roller">
+      <span class="digit">-</span><span class="digit">-</span><span class="digit">-</span><span class="digit">-</span><span class="digit">-</span><span class="digit">-</span>
+    </div>
     <button class="lottery-btn" id="btn-lottery">
       <span class="btn-icon">🧊</span> 开始抽奖
     </button>
@@ -735,9 +735,8 @@
       <div class="congrats-sub">Congratulations</div>
     </div>
     <div class="winner-box">
-      <div class="winner-label">中 奖 号 码</div>
-      <div class="winner-number" id="winner-number">--------</div>
-      <div class="winner-code" id="winner-code"></div>
+      <div class="winner-label">中 奖 编 码</div>
+      <div class="winner-code" id="winner-code">--------</div>
     </div>
     <div class="prize-msg">
       🎉 恭喜以上用户中奖！<br>
@@ -1017,39 +1016,36 @@
 
     lotteryRunning = true;
     const btn = document.getElementById('btn-lottery');
+    const roller = document.getElementById('lottery-roller');
     btn.disabled = true;
     btn.innerHTML = '<span class="btn-icon">🧊</span> 抽奖中...';
+    roller.classList.add('rolling');
 
     // Rolling animation — 3s, fast→slow deceleration
     const rollDuration = 3000;
     const startTime = Date.now();
-    const minDelay = 50;   // fastest at start
-    const maxDelay = 300;  // slowest at end
+    const minDelay = 50;
+    const maxDelay = 300;
 
-    const winnerNumEl = document.getElementById('winner-number');
     const winnerCodeEl = document.getElementById('winner-code');
 
     // Pre-select winner
     const winnerId = sessionIds[Math.floor(Math.random() * sessionIds.length)];
-    const displayNum = winnerId.slice(-8).toUpperCase();
-
-    // Check if winner has a lottery code
     const winnerCodeEntry = cachedCodes.find(c => c.session_id === winnerId);
+    const winnerCode = winnerCodeEntry ? winnerCodeEntry.code : '******';
+    const digitCount = winnerCode.length;
 
-    const chars = '0123456789ABCDEF';
+    const chars = '0123456789';
 
     function roll() {
       const elapsed = Date.now() - startTime;
 
       if (elapsed >= rollDuration) {
-        // Done — show winner
-        winnerNumEl.textContent = displayNum;
-        if (winnerCodeEntry) {
-          winnerCodeEl.textContent = '抽奖编码: ' + winnerCodeEntry.code;
-        } else {
-          winnerCodeEl.textContent = '';
-        }
-        showLotteryModal();
+        // Done — show winner code in roller, then open modal
+        roller.classList.remove('rolling');
+        roller.innerHTML = [...winnerCode].map(d => `<span class="digit">${d}</span>`).join('');
+        winnerCodeEl.textContent = winnerCode;
+        setTimeout(() => showLotteryModal(), 300);
         btn.disabled = false;
         btn.innerHTML = '<span class="btn-icon">🧊</span> 开始抽奖';
         lotteryRunning = false;
@@ -1057,15 +1053,16 @@
       }
 
       // Random digits while rolling
-      let rolling = '';
-      for (let i = 0; i < displayNum.length; i++) {
-        rolling += chars[Math.floor(Math.random() * chars.length)];
+      let rollingHtml = '';
+      for (let i = 0; i < digitCount; i++) {
+        const d = chars[Math.floor(Math.random() * chars.length)];
+        rollingHtml += `<span class="digit">${d}</span>`;
       }
-      winnerNumEl.textContent = rolling;
+      roller.innerHTML = rollingHtml;
 
       // Delay grows from fast to slow, using ease-out curve
       const progress = elapsed / rollDuration;
-      const easeOut = 1 - Math.pow(1 - progress, 3); // cubic ease-out
+      const easeOut = 1 - Math.pow(1 - progress, 3);
       const delay = minDelay + (maxDelay - minDelay) * easeOut;
 
       setTimeout(roll, delay);
